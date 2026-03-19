@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Operativo 2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg: #0c0e14;
+            --surface: #13151e;
+            --card: #191c28;
+            --border: #252938;
+            --text: #e2e4eb;
+            --muted: #8b8fa3;
+            --accent: #6c5ce7;
+            --accent2: #a29bfe;
+            --green: #00cec9;
+            --red: #ff6b6b;
+            --orange: #fdcb6e;
+            --blue: #74b9ff;
+            --radius: 12px
+        }
+
+        body {
+            font-family: 'DM Sans',sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg)
+        }
+
+            .app-header h1 {
+                font-size: 1.3rem;
+                font-weight: 700;
+                letter-spacing: -.02em
+            }
+
+        .main-tabs {
+            display: flex;
+            gap: 4px;
+            margin-left: 24px
+        }
+
+        .main-tab {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: .82rem;
+            cursor: pointer;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid transparent;
+            font-family: inherit;
+            font-weight: 600;
+            transition: .2s
+        }
+
+            .main-tab.active {
+                background: var(--accent);
+                color: #fff;
+                border-color: var(--accent)
+            }
+
+            .main-tab:hover:not(.active) {
+                border-color: var(--border);
+                color: var(--text)
+            }
+
+            .main-tab.loaded::after {
+                content: '';
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                background: var(--green);
+                border-radius: 50%;
+                margin-left: 6px;
+                vertical-align: middle
+            }
+
+        .page {
+            display: none;
+            padding: 20px 24px
+        }
+
+            .page.active {
+                display: block
+            }
+
+        h2 {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 12px
+        }
+
+        h3 {
+            font-size: .85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--accent2)
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px
+        }
+
+        .g4 {
+            grid-template-columns: repeat(4,1fr)
+        }
+
+        .g3 {
+            grid-template-columns: repeat(3,1fr)
+        }
+
+        .g2 {
+            grid-template-columns: 1fr 1fr
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+            overflow: hidden
+        }
+
+            .card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg,var(--accent),var(--accent2));
+                opacity: 0;
+                transition: .3s
+            }
+
+            .card:hover::before {
+                opacity: 1
+            }
+
+        .kpi {
+            text-align: center;
+            padding: 24px 16px
+        }
+
+            .kpi .value {
+                font-family: 'JetBrains Mono',monospace;
+                font-size: 2.2rem;
+                font-weight: 700;
+                line-height: 1;
+                margin: 8px 0 4px
+            }
+
+            .kpi .label {
+                color: var(--muted);
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .1em
+            }
+
+            .kpi .sub {
+                color: var(--muted);
+                font-size: .68rem;
+                margin-top: 4px
+            }
+
+            .kpi.accent .value {
+                color: var(--accent2)
+            }
+
+            .kpi.green .value {
+                color: var(--green)
+            }
+
+            .kpi.orange .value {
+                color: var(--orange)
+            }
+
+            .kpi.red .value {
+                color: var(--red)
+            }
+
+            .kpi.blue .value {
+                color: var(--blue)
+            }
+
+        .section {
+            margin-bottom: 20px
+        }
+
+        .tag {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            font-size: .62rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .05em
+        }
+
+        .bar-h {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-size: .76rem
+        }
+
+            .bar-h .name {
+                width: 150px;
+                flex-shrink: 0;
+                text-align: left;
+                color: var(--muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis
+            }
+
+            .bar-h .track {
+                flex: 1;
+                height: 20px;
+                background: var(--surface);
+                border-radius: 4px;
+                overflow: hidden
+            }
+
+            .bar-h .fill {
+                height: 100%;
+                border-radius: 4px;
+                transition: width .6s ease
+            }
+
+            .bar-h .pct {
+                min-width: 50px;
+                font-family: 'JetBrains Mono',monospace;
+                font-size: .7rem;
+                color: var(--accent2)
+            }
+
+        .mini-bar {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            font-size: .72rem;
+            margin-bottom: 3px
+        }
+
+            .mini-bar .lbl {
+                min-width: 120px;
+                color: var(--muted);
+                text-align: right;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap
+            }
+
+            .mini-bar .bar {
+                flex: 1;
+                height: 14px;
+                background: var(--surface);
+                border-radius: 3px;
+                overflow: hidden
+            }
+
+            .mini-bar .bar-fill {
+                height: 100%;
+                border-radius: 3px
+            }
+
+            .mini-bar .val {
+                min-width: 30px;
+                font-family: 'JetBrains Mono',monospace;
+                color: var(--text);
+                font-size: .68rem
+            }
+
+        .table-wrap {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border)
+        }
+
+            .table-wrap::-webkit-scrollbar {
+                width: 6px
+            }
+
+            .table-wrap::-webkit-scrollbar-track {
+                background: var(--surface)
+            }
+
+            .table-wrap::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 3px
+            }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .76rem
+        }
+
+        th {
+            background: var(--surface);
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: .66rem;
+            letter-spacing: .06em;
+            padding: 10px 12px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            z-index: 1
+        }
+
+        td {
+            padding: 8px 12px;
+            border-top: 1px solid var(--border)
+        }
+
+        tr:hover td {
+            background: rgba(108,92,231,.06)
+        }
+
+        .chart-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 250px
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px
+        }
+
+            .filters label {
+                color: var(--muted);
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .05em
+            }
+
+            .filters select, .filters input {
+                background: var(--card);
+                border: 1px solid var(--border);
+                color: var(--text);
+                padding: 7px 11px;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: .78rem;
+                outline: none
+            }
+
+            .filters select {
+                min-width: 150px
+            }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px
+        }
+
+        .btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: .8rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: .2s
+        }
+
+            .btn:hover {
+                background: var(--accent2)
+            }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted)
+        }
+
+            .btn-outline:hover {
+                border-color: var(--accent);
+                color: var(--text)
+            }
+        /* UPLOAD ZONE */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            cursor: pointer;
+            transition: .3s;
+            margin: 12px 0
+        }
+
+            .upload-zone:hover, .upload-zone.dragover {
+                border-color: var(--accent);
+                background: rgba(108,92,231,.06)
+            }
+
+            .upload-zone h3 {
+                color: var(--text);
+                font-size: 1rem;
+                margin-bottom: 8px
+            }
+
+            .upload-zone p {
+                color: var(--muted);
+                font-size: .82rem
+            }
+
+            .upload-zone .icon {
+                font-size: 2.5rem;
+                margin-bottom: 12px;
+                opacity: .5
+            }
+
+            .upload-zone.done {
+                border-color: var(--green);
+                background: rgba(0,206,201,.06)
+            }
+
+                .upload-zone.done .icon {
+                    color: var(--green);
+                    opacity: 1
+                }
+
+        .fade-in {
+            animation: fadeIn .4s ease
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @media(max-width:900px) {
+            .g4, .g3, .g2 {
+                grid-template-columns: 1fr
+            }
+
+            .app-header {
+                flex-wrap: wrap
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-header">
+        <h1>Dashboard Operativo 2026</h1>
+        <div class="main-tabs">
+            <button class="main-tab active" onclick="switchPage('inasis')">Inasistencias</button>
+            <button class="main-tab" onclick="switchPage('horas')">Horas Adicionales</button>
+        </div>
+    </div>
+
+    <!-- ==================== INASISTENCIAS PAGE ==================== -->
+    <div class="page active" id="page-inasis">
+        <div id="inasis-upload" class="upload-zone" onclick="document.getElementById('inasis-file').click()">
+            <div class="icon">&#128203;</div>
+            <h3>Cargar CSV de Inasistencias</h3>
+            <p>Arrastra el archivo aquí o haz clic para seleccionar</p>
+            <input type="file" id="inasis-file" accept=".csv" style="display:none">
+        </div>
+        <div id="inasis-dashboard" style="display:none">
+            <div class="filters section">
+                <div class="filter-group"><label>Centro</label><select id="fCentro"><option value="">Todos</option></select></div>
+                <div class="filter-group"><label>Planta</label><select id="fPlanta"><option value="">Todas</option></select></div>
+                <div class="filter-group"><label>Causa</label><select id="fCausa"><option value="">Todas</option></select></div>
+                <div class="filter-group"><label>Desde</label><input type="date" id="fDesde"></div>
+                <div class="filter-group"><label>Hasta</label><input type="date" id="fHasta"></div>
+                <div class="filter-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn-outline btn" onclick="resetInasisFilters()">Limpiar</button></div>
+            </div>
+            <div class="grid g4 section">
+                <div class="card kpi accent"><div class="label">Total Reportes</div><div class="value" id="kTotal">-</div></div>
+                <div class="card kpi green"><div class="label">Justificados</div><div class="value" id="kJust">-</div><div class="sub" id="kJustSub"></div></div>
+                <div class="card kpi red"><div class="label">Sin Justificar</div><div class="value" id="kSinCausa">-</div><div class="sub" id="kSinCausaSub"></div></div>
+                <div class="card kpi blue"><div class="label">Causas Distintas</div><div class="value" id="kCausas">-</div></div>
+            </div>
+            <div class="grid g2 section">
+                <div class="card fade-in"><h2>Pareto por Planta <span class="tag">%</span></h2><div id="paretoPlanta"></div></div>
+                <div class="card fade-in"><h2>Pareto por Causa <span class="tag">%</span></h2><div id="paretoCausa"></div></div>
+            </div>
+            <div class="grid g3 section" id="topPlantasSection"></div>
+            <div class="grid g3 section" id="topCausasSection"></div>
+            <div class="grid g2 section">
+                <div class="card fade-in"><h2>Justificados vs Sin Justificar por Centro</h2><div class="chart-wrap"><canvas id="chartJustCentro"></canvas></div></div>
+                <div class="card fade-in"><h2>Top 15 Responsables</h2><div id="paretoResp"></div></div>
+            </div>
+            <div class="card section fade-in"><h2>Detalle por Planta — Justificados, Pendientes y Top 3 Causas</h2><div class="table-wrap" id="plantaDetailTable"></div></div>
+            <div class="card section fade-in"><h2>Tabla Cruzada — Centro × Causa</h2><div class="table-wrap" id="crossTable"></div></div>
+        </div>
+    </div>
+
+    <!-- ==================== HORAS ADICIONALES PAGE ==================== -->
+    <div class="page" id="page-horas">
+        <div id="horas-upload" class="upload-zone" onclick="document.getElementById('horas-file').click()">
+            <div class="icon">&#9201;</div>
+            <h3>Cargar CSV de Horas Adicionales</h3>
+            <p>Arrastra el archivo aquí o haz clic para seleccionar</p>
+            <input type="file" id="horas-file" accept=".csv" style="display:none">
+        </div>
+        <div id="horas-dashboard" style="display:none">
+            <div class="filters section">
+                <div class="filter-group"><label>Centro</label><select id="hfCentro"><option value="">Todos</option></select></div>
+                <div class="filter-group"><label>Planta</label><select id="hfPlanta"><option value="">Todas</option></select></div>
+                <div class="filter-group"><label>Aprobación</label><select id="hfAprob"><option value="">Todas</option></select></div>
+                <div class="filter-group"><label>Desde</label><input type="date" id="hfDesde"></div>
+                <div class="filter-group"><label>Hasta</label><input type="date" id="hfHasta"></div>
+                <div class="filter-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn-outline btn" onclick="resetHorasFilters()">Limpiar</button></div>
+            </div>
+            <div class="grid g3 section">
+                <div class="card kpi accent"><div class="label">Total Registros</div><div class="value" id="hkTotal">-</div></div>
+                <div class="card kpi blue"><div class="label">Horas Extra Registradas</div><div class="value" id="hkHorasExtra">-</div><div class="sub">Suma CANT_HORAS_EXTRA</div></div>
+                <div class="card kpi green"><div class="label">Horas Extra Aprobadas</div><div class="value" id="hkHorasAprob">-</div><div class="sub">Si + Parcial</div></div>
+            </div>
+            <div class="grid g3 section">
+                <div class="card kpi green"><div class="label">Aprobadas (Si)</div><div class="value" id="hkSi">-</div><div class="sub" id="hkSiSub"></div></div>
+                <div class="card kpi orange"><div class="label">Parciales</div><div class="value" id="hkParcial">-</div><div class="sub" id="hkParcialSub"></div></div>
+                <div class="card kpi red"><div class="label">Rechazadas (No)</div><div class="value" id="hkNo">-</div><div class="sub" id="hkNoSub"></div></div>
+            </div>
+            <div class="grid g2 section">
+                <div class="card fade-in"><h2>Aprobación por Centro <span class="tag">stacked</span></h2><div class="chart-wrap"><canvas id="chartAprobCentro"></canvas></div></div>
+                <div class="card fade-in"><h2>Distribución de Causas <span class="tag">%</span></h2><div id="paretoCausaH"></div></div>
+            </div>
+            <div class="grid g3 section" id="topCausasHoras"></div>
+            <div class="grid g2 section">
+                <div class="card fade-in"><h2>Horas Extra por Planta (Top 15) <span class="tag">acumulado</span></h2><div id="paretoPlantaH"></div></div>
+                <div class="card fade-in"><h2>Tasa de Rechazo por Planta (Top 15) <span class="tag">%</span></h2><div id="paretoRechazoPlanta"></div></div>
+            </div>
+            <div class="card section fade-in"><h2>Detalle por Planta — Registros, Aprobación y Top Causas</h2><div class="table-wrap" id="horasDetailTable"></div></div>
+            <div class="grid g2 section">
+                <div class="card fade-in"><h2>Horas Extra Promedio por Día de Semana</h2><div class="chart-wrap"><canvas id="chartDiaSemana"></canvas></div></div>
+                <div class="card fade-in"><h2>Top 15 Responsables por Horas Extra Aprobadas</h2><div id="paretoRespH"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COLORS = ['#6c5ce7', '#a29bfe', '#74b9ff', '#00cec9', '#fdcb6e', '#ff6b6b', '#e17055', '#55a3e8', '#b8e994', '#f8a5c2', '#778beb', '#cf6a87', '#63cdda', '#f19066'];
+        const CENTRO_MAP = { '-': 'LOGISTICA INTERNA', 'SUPER': 'SUPERCOCO' };
+        function fixCentro(c) { return CENTRO_MAP[c] || c }
+        function fmt(n) { return n.toLocaleString('es-CO') }
+
+        // ========== PAGE SWITCHING ==========
+        function switchPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+            document.querySelector(`.main-tab[onclick*="${id}"]`).classList.add('active');
+        }
+
+        // ========== FILE UPLOAD HANDLING ==========
+        function setupUpload(zoneId, fileId, callback) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(fileId);
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover') });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (e.dataTransfer.files[0]) parseFile(e.dataTransfer.files[0], zone, callback) });
+            input.addEventListener('change', e => { if (e.target.files[0]) parseFile(e.target.files[0], zone, callback) });
+        }
+        function parseFile(file, zone, callback) {
+            zone.innerHTML = '<div class="icon" style="color:var(--green)">&#10003;</div><h3>' + file.name + '</h3><p>Procesando...</p>';
+            Papa.parse(file, {
+                header: true, skipEmptyLines: true, complete: r => {
+                    zone.classList.add('done');
+                    zone.querySelector('p').textContent = r.data.length + ' registros cargados';
+                    // Mark tab as loaded
+                    const tabIdx = zone.id.includes('inasis') ? 0 : 1;
+                    document.querySelectorAll('.main-tab')[tabIdx].classList.add('loaded');
+                    callback(r.data);
+                }
+            });
+        }
+
+        // ========== INASISTENCIAS ==========
+        let inasisAll = [], inasisFiltered = [];
+        function initInasis(data) {
+            inasisAll = data.map(r => ({
+                fecha: r.FECHA_LABOR, centro: fixCentro(r.CENTRO_PROGRAMADO || ''), planta: r.PLANTA_PROGRAMADA || '',
+                linea: r.LINEA_PROGRAMADA || '', causa: r.CAUSA || '', sinCausa: (!r.ID_CAUSA || r.ID_CAUSA.trim() === '') ? 1 : 0,
+                resp: r.RESPONSABLE || '', horario: r.HORARIO_ENTRADA || ''
+            }));
+            const fechas = inasisAll.map(r => r.fecha).filter(Boolean).sort();
+            document.getElementById('fDesde').value = fechas[0] || '';
+            document.getElementById('fHasta').value = fechas[fechas.length - 1] || '';
+            populateSel('fCentro', [...new Set(inasisAll.map(r => r.centro))].filter(Boolean).sort());
+            populateSel('fPlanta', [...new Set(inasisAll.map(r => r.planta))].filter(Boolean).sort());
+            populateSel('fCausa', [...new Set(inasisAll.map(r => r.causa))].filter(c => c && c !== '(Vacío)').sort());
+            ['fCentro', 'fPlanta', 'fCausa', 'fDesde', 'fHasta'].forEach(id => document.getElementById(id).addEventListener('change', applyInasisFilters));
+            document.getElementById('inasis-dashboard').style.display = 'block';
+            applyInasisFilters();
+        }
+        function populateSel(id, vals) { const s = document.getElementById(id); while (s.options.length > 1) s.remove(1); vals.forEach(v => { if (v) s.add(new Option(v, v)) }) }
+        function applyInasisFilters() {
+            const fc = document.getElementById('fCentro').value, fp = document.getElementById('fPlanta').value, fca = document.getElementById('fCausa').value, fd = document.getElementById('fDesde').value, fh = document.getElementById('fHasta').value;
+            inasisFiltered = inasisAll.filter(r => {
+                if (fc && r.centro !== fc) return false; if (fp && r.planta !== fp) return false;
+                if (fca && r.causa !== fca) return false; if (fd && r.fecha < fd) return false; if (fh && r.fecha > fh) return false; return true;
+            }); renderInasis();
+        }
+        function resetInasisFilters() {
+            ['fCentro', 'fPlanta', 'fCausa'].forEach(id => document.getElementById(id).value = '');
+            const fechas = inasisAll.map(r => r.fecha).filter(Boolean).sort();
+            document.getElementById('fDesde').value = fechas[0] || ''; document.getElementById('fHasta').value = fechas[fechas.length - 1] || '';
+            applyInasisFilters();
+        }
+
+        function renderPareto(containerId, data, field, limit = 16) {
+            const counts = {}; data.forEach(r => { const k = r[field]; if (!k || k === '(Vacío)') return; counts[k] = (counts[k] || 0) + 1 });
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
+            const total = sorted.reduce((s, e) => s + e[1], 0); const max = sorted[0] ? sorted[0][1] : 1;
+            document.getElementById(containerId).innerHTML = sorted.map(([n, c], i) => `<div class="bar-h"><span class="name" title="${n}">${n}</span><div class="track"><div class="fill" style="width:${(c / max * 100).toFixed(1)}%;background:${COLORS[i % COLORS.length]}"></div></div><span class="pct">${(c / total * 100).toFixed(1)}%</span></div>`).join('');
+        }
+
+        let chartJust = null;
+        function renderInasis() {
+            const F = inasisFiltered, total = F.length, sinC = F.filter(r => r.sinCausa === 1).length, just = total - sinC;
+            document.getElementById('kTotal').textContent = fmt(total);
+            document.getElementById('kJust').textContent = fmt(just);
+            document.getElementById('kJustSub').textContent = total ? (just / total * 100).toFixed(1) + '%' : '';
+            document.getElementById('kSinCausa').textContent = fmt(sinC);
+            document.getElementById('kSinCausaSub').textContent = total ? (sinC / total * 100).toFixed(1) + '%' : '';
+            document.getElementById('kCausas').textContent = new Set(F.map(r => r.causa).filter(c => c && c !== '(Vacío)')).size;
+
+            renderPareto('paretoPlanta', F, 'planta');
+            renderPareto('paretoCausa', F, 'causa');
+            renderPareto('paretoResp', F, 'resp', 15);
+
+            // Top 3 plantas
+            const pc = {}; F.forEach(r => { pc[r.planta] = (pc[r.planta] || 0) + 1 });
+            const top3P = Object.entries(pc).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            document.getElementById('topPlantasSection').innerHTML = top3P.map(([planta, t], idx) => {
+                const sub = F.filter(r => r.planta === planta);
+                const ca = {}; sub.forEach(r => { const c = r.causa; if (c && c !== '(Vacío)') ca[c] = (ca[c] || 0) + 1 });
+                const topC = Object.entries(ca).sort((a, b) => b[1] - a[1]).slice(0, 5); const mx = topC[0] ? topC[0][1] : 1;
+                const hr = {}; sub.forEach(r => { const h = r.horario || 'Sin dato'; hr[h] = (hr[h] || 0) + 1 });
+                const topH = Object.entries(hr).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                const sJ = sub.filter(r => r.sinCausa === 1).length;
+                return `<div class="card fade-in"><h3 style="color:${COLORS[idx]}">${planta}</h3>
+          <div style="display:flex;gap:14px;margin-bottom:10px;font-size:.76rem"><div><span style="color:var(--muted)">Total:</span> <strong>${t}</strong></div><div><span style="color:var(--muted)">Just:</span> <strong style="color:var(--green)">${((t - sJ) / t * 100).toFixed(1)}%</strong></div><div><span style="color:var(--muted)">Sin Just:</span> <strong style="color:var(--red)">${sJ}</strong></div></div>
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Top causas</div>
+          ${topC.map(([c, n]) => `<div class="mini-bar"><span class="lbl" title="${c}">${c}</span><div class="bar"><div class="bar-fill" style="width:${(n / mx * 100)}%;background:${COLORS[idx]}"></div></div><span class="val">${n}</span></div>`).join('')}
+          <div style="font-size:.7rem;color:var(--muted);margin:8px 0 4px;text-transform:uppercase">Horarios frecuentes</div>
+          ${topH.map(([h, n]) => `<div style="font-size:.7rem;display:flex;justify-content:space-between"><span style="color:var(--muted);max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h}">${h}</span><span style="font-family:'JetBrains Mono',monospace">${n}</span></div>`).join('')}</div>`;
+            }).join('');
+
+            // Top 3 causas
+            const cc = {}; F.forEach(r => { const c = r.causa; if (c && c !== '(Vacío)') cc[c] = (cc[c] || 0) + 1 });
+            const top3C = Object.entries(cc).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            document.getElementById('topCausasSection').innerHTML = top3C.map(([causa, t], idx) => {
+                const sub = F.filter(r => r.causa === causa);
+                const pl = {}; sub.forEach(r => { pl[r.planta] = (pl[r.planta] || 0) + 1 });
+                const topP = Object.entries(pl).sort((a, b) => b[1] - a[1]).slice(0, 5); const mx = topP[0] ? topP[0][1] : 1;
+                const ce = {}; sub.forEach(r => { ce[r.centro] = (ce[r.centro] || 0) + 1 });
+                const fMap = {}; sub.forEach(r => { fMap[r.fecha] = (fMap[r.fecha] || 0) + 1 });
+                const vals = Object.values(fMap); const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+                const maxD = Object.entries(fMap).reduce((m, e) => e[1] > m[1] ? e : m, ['', 0]);
+                return `<div class="card fade-in"><h3 style="color:${COLORS[idx + 3]}">${causa}</h3>
+          <div style="display:flex;gap:14px;margin-bottom:10px;font-size:.76rem"><div><span style="color:var(--muted)">Total:</span> <strong>${t}</strong></div><div><span style="color:var(--muted)">Prom/día:</span> <strong>${avg}</strong></div><div><span style="color:var(--muted)">Pico:</span> <strong>${maxD[1]}</strong> <span style="color:var(--muted);font-size:.66rem">(${maxD[0]})</span></div></div>
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Top plantas afectadas</div>
+          ${topP.map(([p, n]) => `<div class="mini-bar"><span class="lbl" title="${p}">${p}</span><div class="bar"><div class="bar-fill" style="width:${(n / mx * 100)}%;background:${COLORS[idx + 3]}"></div></div><span class="val">${n}</span></div>`).join('')}
+          <div style="font-size:.7rem;color:var(--muted);margin:8px 0 4px;text-transform:uppercase">Por centro</div>
+          ${Object.entries(ce).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<div style="font-size:.7rem;display:flex;justify-content:space-between"><span style="color:var(--muted)">${c}</span><span style="font-family:'JetBrains Mono',monospace">${n} (${(n / t * 100).toFixed(0)}%)</span></div>`).join('')}</div>`;
+            }).join('');
+
+            // Justified bar chart
+            const centros = [...new Set(F.map(r => r.centro))].sort();
+            const jst = {}, njst = {}; F.forEach(r => { if (r.sinCausa) { njst[r.centro] = (njst[r.centro] || 0) + 1 } else { jst[r.centro] = (jst[r.centro] || 0) + 1 } });
+            const ctx1 = document.getElementById('chartJustCentro').getContext('2d');
+            if (chartJust) chartJust.destroy();
+            chartJust = new Chart(ctx1, { type: 'bar', data: { labels: centros, datasets: [{ label: 'Justificados', data: centros.map(c => jst[c] || 0), backgroundColor: '#6c5ce7', borderRadius: 4 }, { label: 'Sin Justificar', data: centros.map(c => njst[c] || 0), backgroundColor: '#ff6b6b', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b8fa3', font: { family: 'DM Sans', size: 11 } } } }, scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#8b8fa3' } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#8b8fa3' }, beginAtZero: true } } } });
+
+            // Planta detail table
+            const pDet = {}; F.forEach(r => { if (!pDet[r.planta]) pDet[r.planta] = { t: 0, sj: 0, ca: {} }; pDet[r.planta].t++; if (r.sinCausa) pDet[r.planta].sj++; const c = r.causa; if (c && c !== '(Vacío)') pDet[r.planta].ca[c] = (pDet[r.planta].ca[c] || 0) + 1 });
+            let th = '<table><thead><tr><th>Planta</th><th>Total</th><th>Just.</th><th>Sin Just.</th><th>% Just</th><th>Causa #1</th><th>Causa #2</th><th>Causa #3</th></tr></thead><tbody>';
+            Object.entries(pDet).sort((a, b) => b[1].t - a[1].t).forEach(([p, d]) => {
+                const j = d.t - d.sj, pct = (j / d.t * 100).toFixed(1); const tc = Object.entries(d.ca).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                const col = parseFloat(pct) >= 90 ? 'var(--green)' : parseFloat(pct) >= 70 ? 'var(--orange)' : 'var(--red)';
+                th += `<tr><td style="font-weight:600">${p}</td><td style="text-align:center">${d.t}</td><td style="text-align:center;color:var(--green)">${j}</td><td style="text-align:center;color:var(--red)">${d.sj}</td><td style="text-align:center;color:${col};font-weight:600">${pct}%</td>`;
+                for (let i = 0; i < 3; i++) { th += tc[i] ? `<td>${tc[i][0]} <span style="color:var(--accent2);font-family:'JetBrains Mono',monospace">(${tc[i][1]})</span></td>` : '<td style="color:var(--border)">—</td>' }
+                th += '</tr>';
+            });
+            document.getElementById('plantaDetailTable').innerHTML = th + '</tbody></table>';
+
+            // Cross table
+            const cCausas = {}, cCentros = {}, mx = {};
+            F.forEach(r => { const ca = r.causa; if (!ca || ca === '(Vacío)') return; cCausas[ca] = (cCausas[ca] || 0) + 1; cCentros[r.centro] = (cCentros[r.centro] || 0) + 1; mx[r.centro + '|' + ca] = (mx[r.centro + '|' + ca] || 0) + 1 });
+            const sCA = Object.entries(cCausas).sort((a, b) => b[1] - a[1]).map(e => e[0]), sCE = Object.entries(cCentros).sort((a, b) => b[1] - a[1]).map(e => e[0]);
+            let ct = '<table><thead><tr><th>Centro</th>'; sCA.forEach(c => { ct += `<th style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c}">${c}</th>` }); ct += '<th style="color:var(--accent2)">TOTAL</th></tr></thead><tbody>';
+            sCE.forEach(ce => { ct += `<tr><td style="font-weight:600">${ce}</td>`; let rt = 0; sCA.forEach(ca => { const v = mx[ce + '|' + ca] || 0; rt += v; ct += `<td style="text-align:center;background:${v ? `rgba(108,92,231,${Math.min(v / 100, .5).toFixed(2)})` : 'transparent'}">${v || ''}</td>` }); ct += `<td style="text-align:center;font-weight:700;color:var(--accent2)">${rt}</td></tr>` });
+            document.getElementById('crossTable').innerHTML = ct + '</tbody></table>';
+        }
+
+        // ========== HORAS ADICIONALES ==========
+        let horasAll = [], horasFiltered = [];
+        function initHoras(data) {
+            horasAll = data.map(r => ({
+                fecha: r.FECHA_LABOR, centro: fixCentro(r.CENTRO_PROGRAMADO || ''), planta: r.PLANTA_PROGRAMADA || '',
+                linea: r.LINEA_PROGRAMADA || '', nombre: r.NOMBRE || '', turno: r.TURNO_PROGRAMADO || '',
+                horasExtra: parseFloat(r.CANT_HORAS_EXTRA) || 0, horasLaborar: parseFloat(r.HORAS_LABORAR) || 0,
+                aprobacion: r.APROBACION || 'Sin gestionar', causa: r.CAUSA || 'Sin causa',
+                horasAprobadas: parseFloat(r.HORAS_APROBADAS) || 0, resp: r.RESPONSABLE || ''
+            }));
+            const fechas = horasAll.map(r => r.fecha).filter(Boolean).sort();
+            document.getElementById('hfDesde').value = fechas[0] || '';
+            document.getElementById('hfHasta').value = fechas[fechas.length - 1] || '';
+            populateSel('hfCentro', [...new Set(horasAll.map(r => r.centro))].filter(Boolean).sort());
+            populateSel('hfPlanta', [...new Set(horasAll.map(r => r.planta))].filter(Boolean).sort());
+            populateSel('hfAprob', [...new Set(horasAll.map(r => r.aprobacion))].sort());
+            ['hfCentro', 'hfPlanta', 'hfAprob', 'hfDesde', 'hfHasta'].forEach(id => document.getElementById(id).addEventListener('change', applyHorasFilters));
+            document.getElementById('horas-dashboard').style.display = 'block';
+            applyHorasFilters();
+        }
+        function applyHorasFilters() {
+            const fc = document.getElementById('hfCentro').value, fp = document.getElementById('hfPlanta').value, fa = document.getElementById('hfAprob').value, fd = document.getElementById('hfDesde').value, fh = document.getElementById('hfHasta').value;
+            horasFiltered = horasAll.filter(r => {
+                if (fc && r.centro !== fc) return false; if (fp && r.planta !== fp) return false;
+                if (fa && r.aprobacion !== fa) return false; if (fd && r.fecha < fd) return false; if (fh && r.fecha > fh) return false; return true;
+            }); renderHoras();
+        }
+        function resetHorasFilters() {
+            ['hfCentro', 'hfPlanta', 'hfAprob'].forEach(id => document.getElementById(id).value = '');
+            const fechas = horasAll.map(r => r.fecha).filter(Boolean).sort();
+            document.getElementById('hfDesde').value = fechas[0] || ''; document.getElementById('hfHasta').value = fechas[fechas.length - 1] || '';
+            applyHorasFilters();
+        }
+
+        let chartAprobC = null, chartDiaS = null;
+        function renderHoras() {
+            const H = horasFiltered, total = H.length;
+            const si = H.filter(r => r.aprobacion === 'Si').length, no = H.filter(r => r.aprobacion === 'No').length, parc = H.filter(r => r.aprobacion === 'Parcial').length;
+            const totalExtra = H.reduce((s, r) => s + r.horasExtra, 0);
+            const totalAprob = H.filter(r => r.aprobacion === 'Si' || r.aprobacion === 'Parcial').reduce((s, r) => s + r.horasExtra, 0);
+
+            document.getElementById('hkTotal').textContent = fmt(total);
+            document.getElementById('hkSi').textContent = fmt(si); document.getElementById('hkSiSub').textContent = total ? (si / total * 100).toFixed(1) + '%' : '';
+            document.getElementById('hkParcial').textContent = fmt(parc); document.getElementById('hkParcialSub').textContent = total ? (parc / total * 100).toFixed(1) + '%' : '';
+            document.getElementById('hkNo').textContent = fmt(no); document.getElementById('hkNoSub').textContent = total ? (no / total * 100).toFixed(1) + '%' : '';
+            document.getElementById('hkHorasExtra').textContent = totalExtra.toFixed(1);
+            document.getElementById('hkHorasAprob').textContent = totalAprob.toFixed(1);
+
+            // Aprobación por centro stacked
+            const centros = [...new Set(H.map(r => r.centro))].sort();
+            const aSi = {}, aNo = {}, aPar = {}, aSG = {};
+            H.forEach(r => { const c = r.centro; if (r.aprobacion === 'Si') aSi[c] = (aSi[c] || 0) + 1; else if (r.aprobacion === 'No') aNo[c] = (aNo[c] || 0) + 1; else if (r.aprobacion === 'Parcial') aPar[c] = (aPar[c] || 0) + 1; else aSG[c] = (aSG[c] || 0) + 1 });
+            const ctx2 = document.getElementById('chartAprobCentro').getContext('2d');
+            if (chartAprobC) chartAprobC.destroy();
+            chartAprobC = new Chart(ctx2, {
+                type: 'bar', data: {
+                    labels: centros, datasets: [
+                        { label: 'Aprobada', data: centros.map(c => aSi[c] || 0), backgroundColor: '#00cec9', borderRadius: 4 },
+                        { label: 'Parcial', data: centros.map(c => aPar[c] || 0), backgroundColor: '#fdcb6e', borderRadius: 4 },
+                        { label: 'Rechazada', data: centros.map(c => aNo[c] || 0), backgroundColor: '#ff6b6b', borderRadius: 4 },
+                        { label: 'Sin gestionar', data: centros.map(c => aSG[c] || 0), backgroundColor: '#8b8fa3', borderRadius: 4 }
+                    ]
+                }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#8b8fa3', font: { family: 'DM Sans', size: 11 } } } }, scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#8b8fa3' } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#8b8fa3' }, beginAtZero: true } } }
+            });
+
+            // Pareto causa horas
+            renderPareto('paretoCausaH', H, 'causa', 10);
+
+            // Top 3 causas detail
+            const causaCounts = {}; H.forEach(r => { if (r.causa && r.causa !== 'Sin causa') causaCounts[r.causa] = (causaCounts[r.causa] || 0) + 1 });
+            const top3C = Object.entries(causaCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            document.getElementById('topCausasHoras').innerHTML = top3C.map(([causa, t], idx) => {
+                const sub = H.filter(r => r.causa === causa);
+                const totalH = sub.reduce((s, r) => s + r.horasExtra, 0);
+                const apSi = sub.filter(r => r.aprobacion === 'Si').length;
+                const apNo = sub.filter(r => r.aprobacion === 'No').length;
+                const pl = {}; sub.forEach(r => { pl[r.planta] = (pl[r.planta] || 0) + 1 });
+                const topP = Object.entries(pl).sort((a, b) => b[1] - a[1]).slice(0, 5); const mx = topP[0] ? topP[0][1] : 1;
+                return `<div class="card fade-in"><h3 style="color:${COLORS[idx]}">${causa}</h3>
+          <div style="display:flex;gap:12px;margin-bottom:10px;font-size:.76rem;flex-wrap:wrap">
+            <div><span style="color:var(--muted)">Registros:</span> <strong>${t}</strong></div>
+            <div><span style="color:var(--muted)">Horas Extra:</span> <strong>${totalH.toFixed(1)}</strong></div>
+            <div><span style="color:var(--green)">Aprob: ${apSi}</span></div>
+            <div><span style="color:var(--red)">Rech: ${apNo}</span></div>
+          </div>
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:5px;text-transform:uppercase">Top plantas</div>
+          ${topP.map(([p, n]) => `<div class="mini-bar"><span class="lbl" title="${p}">${p}</span><div class="bar"><div class="bar-fill" style="width:${(n / mx * 100)}%;background:${COLORS[idx]}"></div></div><span class="val">${n}</span></div>`).join('')}</div>`;
+            }).join('');
+
+            // Pareto planta horas (by accumulated hours)
+            const plHoras = {}; H.forEach(r => { plHoras[r.planta] = (plHoras[r.planta] || 0) + r.horasExtra });
+            const sortedPH = Object.entries(plHoras).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            const maxPH = sortedPH[0] ? sortedPH[0][1] : 1; const totalPH = sortedPH.reduce((s, e) => s + e[1], 0);
+            document.getElementById('paretoPlantaH').innerHTML = sortedPH.map(([n, v], i) => `<div class="bar-h"><span class="name" title="${n}">${n}</span><div class="track"><div class="fill" style="width:${(v / maxPH * 100).toFixed(1)}%;background:${COLORS[i % COLORS.length]}"></div></div><span class="pct">${v.toFixed(1)}h</span></div>`).join('');
+
+            // Rechazo por planta
+            const plRech = {}; H.forEach(r => { if (!plRech[r.planta]) plRech[r.planta] = { t: 0, no: 0 }; plRech[r.planta].t++; if (r.aprobacion === 'No') plRech[r.planta].no++ });
+            const sortedRech = Object.entries(plRech).filter(([, d]) => d.t >= 5).map(([p, d]) => ([p, (d.no / d.t * 100)])).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            const maxR = sortedRech[0] ? sortedRech[0][1] : 1;
+            document.getElementById('paretoRechazoPlanta').innerHTML = sortedRech.map(([n, v], i) => `<div class="bar-h"><span class="name" title="${n}">${n}</span><div class="track"><div class="fill" style="width:${(v / maxR * 100).toFixed(1)}%;background:${v > 20 ? '#ff6b6b' : v > 10 ? '#fdcb6e' : '#00cec9'}"></div></div><span class="pct">${v.toFixed(1)}%</span></div>`).join('');
+
+            // Horas detail table
+            const pDet = {}; H.forEach(r => {
+                if (!pDet[r.planta]) pDet[r.planta] = { t: 0, si: 0, no: 0, parc: 0, sg: 0, hExtra: 0, hAprob: 0, ca: {} };
+                const d = pDet[r.planta]; d.t++; d.hExtra += r.horasExtra; d.hAprob += r.horasAprobadas;
+                if (r.aprobacion === 'Si') d.si++; else if (r.aprobacion === 'No') d.no++; else if (r.aprobacion === 'Parcial') d.parc++; else d.sg++;
+                if (r.causa && r.causa !== 'Sin causa') d.ca[r.causa] = (d.ca[r.causa] || 0) + 1;
+            });
+            let ht = '<table><thead><tr><th>Planta</th><th>Reg.</th><th>Si</th><th>No</th><th>Parcial</th><th>% Aprob</th><th>H.Extra</th><th>H.Aprob</th><th>Causa #1</th><th>Causa #2</th></tr></thead><tbody>';
+            Object.entries(pDet).sort((a, b) => b[1].t - a[1].t).forEach(([p, d]) => {
+                const pctA = (d.si / d.t * 100).toFixed(1); const col = parseFloat(pctA) >= 80 ? 'var(--green)' : parseFloat(pctA) >= 60 ? 'var(--orange)' : 'var(--red)';
+                const tc = Object.entries(d.ca).sort((a, b) => b[1] - a[1]).slice(0, 2);
+                ht += `<tr><td style="font-weight:600">${p}</td><td style="text-align:center">${d.t}</td><td style="text-align:center;color:var(--green)">${d.si}</td><td style="text-align:center;color:var(--red)">${d.no}</td><td style="text-align:center;color:var(--orange)">${d.parc}</td><td style="text-align:center;color:${col};font-weight:600">${pctA}%</td><td style="text-align:center">${d.hExtra.toFixed(1)}</td><td style="text-align:center">${d.hAprob.toFixed(1)}</td>`;
+                for (let i = 0; i < 2; i++) { ht += tc[i] ? `<td>${tc[i][0]} <span style="color:var(--accent2);font-family:'JetBrains Mono',monospace">(${tc[i][1]})</span></td>` : '<td style="color:var(--border)">—</td>' }
+                ht += '</tr>';
+            });
+            document.getElementById('horasDetailTable').innerHTML = ht + '</tbody></table>';
+
+            // Day of week chart
+            const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            const diaH = [0, 0, 0, 0, 0, 0, 0], diaN = [0, 0, 0, 0, 0, 0, 0];
+            H.forEach(r => { if (!r.fecha) return; const d = new Date(r.fecha + 'T12:00:00').getDay(); const idx = d === 0 ? 6 : d - 1; diaH[idx] += r.horasExtra; diaN[idx]++ });
+            const diaAvg = dias.map((_, i) => diaN[i] ? (diaH[i] / diaN[i]).toFixed(2) : 0);
+            const ctx3 = document.getElementById('chartDiaSemana').getContext('2d');
+            if (chartDiaS) chartDiaS.destroy();
+            chartDiaS = new Chart(ctx3, { type: 'bar', data: { labels: dias, datasets: [{ label: 'Prom. Horas Extra', data: diaAvg, backgroundColor: COLORS.slice(0, 7), borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#8b8fa3' } }, y: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { color: '#8b8fa3' }, beginAtZero: true } } } });
+
+            // Top responsables by approved hours
+            const rH = {}; H.filter(r => r.aprobacion === 'Si').forEach(r => { rH[r.resp] = (rH[r.resp] || 0) + r.horasExtra });
+            const sortedR = Object.entries(rH).sort((a, b) => b[1] - a[1]).slice(0, 15);
+            const maxRH = sortedR[0] ? sortedR[0][1] : 1;
+            document.getElementById('paretoRespH').innerHTML = sortedR.map(([n, v], i) => `<div class="bar-h"><span class="name" title="${n}">${n}</span><div class="track"><div class="fill" style="width:${(v / maxRH * 100).toFixed(1)}%;background:${COLORS[i % COLORS.length]}"></div></div><span class="pct">${v.toFixed(1)}h</span></div>`).join('');
+        }
+
+        // ========== INIT ==========
+        setupUpload('inasis-upload', 'inasis-file', initInasis);
+        setupUpload('horas-upload', 'horas-file', initHoras);
+    </script>
+</body>
+</html>
